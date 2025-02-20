@@ -6,8 +6,15 @@ import os
 import time
 import traceback
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackContext,
+    CallbackQueryHandler,
+)
 from telegram.constants import ParseMode
+from telegram.ext import filters
 import html
 
 proxy = {
@@ -54,9 +61,6 @@ def update_message(context, chat_id, message_id, status, total_cards, current_ca
         )
     except Exception as e:
         print(f"Error updating message: {e}")
-
-# The rest of your processing code...
-# (The above functions remain unchanged)
 
 def process_credit_card(cc_line, nonce, message_id, context, total_cards, current_card, charged_count, declined_count):
     cc_line = cc_line.strip()
@@ -170,7 +174,7 @@ def process_credit_card(cc_line, nonce, message_id, context, total_cards, curren
         time.sleep(3)
         return charged_count, declined_count
 
-# Continue with the rest of your functions...
+# Continue with your other functions here...
 
 def process_file(update: Update, context: CallbackContext, file_path: str):
     try:
@@ -267,19 +271,18 @@ def start_bot(context: CallbackContext):
         print(f"Failed to send startup message: {e}")
 
 def main():
-    updater = Updater(bot_token, use_context=True)
-    dp = updater.dispatcher
+    application = ApplicationBuilder().token(bot_token).build()
+    dp = application.dispatcher
     dp.add_error_handler(error_handler)
 
     dp.add_handler(CommandHandler("ping", handle_message))
-    dp.add_handler(MessageHandler(Filters.document, handle_message))
-    dp.add_handler(MessageHandler(Filters.text, handle_message))
+    dp.add_handler(MessageHandler(filters.Document.ALL, handle_message))
+    dp.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     dp.add_handler(CallbackQueryHandler(handle_callback))
 
-    updater.job_queue.run_once(start_bot, 0)
+    application.job_queue.run_once(start_bot, 0)
 
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 def error_handler(update: object, context: CallbackContext) -> None:
     tb = traceback.format_exc()
